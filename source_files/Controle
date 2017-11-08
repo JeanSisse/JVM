@@ -1,0 +1,27 @@
+#Leitor Exibidor do arquivo .class
+
+O programa efetua:
+	1- a verificação da validade do arquivo .class (verifica assinatura cafebabe -> magic)
+	2- lê os as entradas da tabela do pool de constante;
+	3- verifica se todos os conteudos do mesmo foi lido ou não;
+	4- exibe as constantes na tabela do pool de constante;
+	5- mostrar strings utf8 para 1, 2 e 3 bytes;
+	6- "desreferênciação" dos indices na entrada da tabela de CP para exibição das strings, nomes da classe, nome dos metodos, indices referenciando outras constantes; 
+	7- converte para float, double e long;
+	8- .h foi incrementado com outras struct e funções;
+	9- função para mostrar fields;
+	10- função para carregar e mostrar interfaces;
+	11- função mostrar flags do field;
+	12- função para ler fields;
+	
+Fazer:
+	- Ler fields; (feito)
+	- Ler atributos; (incompleto)
+	- Tratar flags; (feito para fields e para controle)
+	- Mostrar atributos; (incompleto)
+	- Mostrar fields; (feito)
+	- Mostrar flags; (fieto*)
+	- Mostrar flags de fields; (feito)
+	- etc...
+	
+	* ainda existe outras flags para ser tratado;
