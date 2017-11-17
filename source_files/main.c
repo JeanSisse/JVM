@@ -13,8 +13,10 @@ int main (int argc, char *argv[]){
 
 	FILE *fp = fopen(argv[1], "rb");
 	
-	if(fp == NULL)
+	if(fp == NULL){
 		ret = error_openFile();
+		return ret;
+	}
 
 	//FILE *cruzeiro = fopen("cruzeiro.txt", "r");
 

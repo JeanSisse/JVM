@@ -186,6 +186,13 @@ int loadInfConstPool (cp_info *constPool, int const_pool_cont, FILE *fp){
 				constPool[i].info = (classLoadrType *) malloc(sizeof(classLoadrType) * 2);
 				constPool[i].info[0].u4 = ler_u4(fp);
 				constPool[i].info[1].u4 = ler_u4(fp);
+
+				/*SOLUÇÃO TEMPORÁRIA (CONFIRMAR COM O PROFESSOR)*/
+				/*DOUBLE OCUPA DUAS POSIÇÕES NO CONST POOL*/
+				constPool[i+1].info = (classLoadrType *) malloc(sizeof(classLoadrType) * 2);
+				constPool[i+1].info[0].u4 = (intptr_t)NULL;		
+				constPool[i+1].info[1].u4 = (intptr_t)NULL;
+				 i++;	//desconsidera a proxima posição do constPool, pois é a regra qundo é double ou long
 				break;
 
 			case CLASS: /*contem um campo u2 em info*/
@@ -213,8 +220,8 @@ int loadInfConstPool (cp_info *constPool, int const_pool_cont, FILE *fp){
 * válido de indices na tabela (tem que ser consistente com o seu valor low e high na tabela de salto).
 *
 * Imediatamente apos o opcode de uma dessas instrução, entre 0 e 3 bytes
-* de ser considerado como byte de preenchimeto de modo qeu o defaultbyte1 comece em um endereço
-* que é multipo de 4 byte a partir do do inicio (alinha 4 em 4 bytes do início do método), após o 
+* deve ser considerado como byte de preenchimeto de modo qeu o defaultbyte1 comece em um endereço
+* que é multipo de 4 byte a partir do inicio (alinha 4 em 4 bytes do início do método), após o 
 * preenchimento seguem os três valores signed de 32bits cada (default, low e high). Em seguida
 * vem os X offsets de 32bits .
 * X = high - low + 1 (determina o bytes do offset).
@@ -229,11 +236,11 @@ int loadInfConstPool (cp_info *constPool, int const_pool_cont, FILE *fp){
 * lê checa e armazena as informações no code[]
 */
 void if_tableswitch(uint32_t *i, FILE *fp, AT_Code **att_code){
-	int referencia_ini, byte_preechimento, opcode, match_offset;
+	int byte_preechimento, match_offset;
 	uint32_t defaultbyte = 0, low = 0, high = 0;	//variaveis (operandos) de tabela de salto de tableswitch
-	referencia_ini = (*i) - 1;
 
-	byte_preechimento = (4 - (*i % 4)) % 4; //TODO: PQ BYTE DE PREENCIMENTO????????
+
+	byte_preechimento = (4 - (*i % 4)) % 4;
 	//preenche code[] com bytes de preenchimento
 	for(int x = 0; x < byte_preechimento; x++){
 		(*i)++;
@@ -286,15 +293,16 @@ void if_tableswitch(uint32_t *i, FILE *fp, AT_Code **att_code){
 void if_lookupswitch(uint32_t *i, FILE *fp, AT_Code **att_code){
 	uint32_t npairs = 0;	// operando da instrução lookupswitch
 	uint32_t defaultbyte = 0;
-	int referencia_ini, byte_preechimento, opcode;
+	int byte_preenchimento;
 
-	referencia_ini = (*i) - 1;
+	// printf("i = %d\n", *i);
+	byte_preenchimento = (4 - (*i % 4)) % 4;
 
-	byte_preechimento = (4 - (*i % 4)) % 4; //TODO: PQ BYTE DE PREENCIMENTO????????
+	// printf("byte_preenchimento = %d\n", byte_preenchimento);
 	//preenche code[] com bytes de preenchimento
-	for(int x = 0; x < byte_preechimento; x++){
-		(*i)++;
+	for(int x = 0; x < byte_preenchimento; x++){
 		(*att_code)->code[*i] = ler_u1(fp);
+		(*i)++;
 	}
 
 	//pega os 4byte do defaultbyte (target default)
@@ -313,7 +321,7 @@ void if_lookupswitch(uint32_t *i, FILE *fp, AT_Code **att_code){
 
 	//pega os match e os deslocamentos(offset)
 	//na mesm qtd de numero de pairs
-	for(uint32_t x = 0; x < npairs; i++){
+	for(uint32_t x = 0; x < npairs; x++){
 		//pega o valor de match atual
 		for(int j = 0; j < 4; j++){
 			(*att_code)->code[*i] = ler_u1(fp);
@@ -407,7 +415,7 @@ void pega_operandos(AllIns /*decoder*/ *decode, FILE *fp, int opcode, AT_Code **
 * devem aparecer no array code[]. 
 * A funçao checa e chama funções auxiliares para cada uma das instruçoes citadas acima.
 */
-void verifica_instrucao(AT_Code **att_code, FILE *fp,  cp_info *constPool){
+void verifica_instrucao(AT_Code **att_code, FILE *fp){
 	int opcode;
 	
 	AllIns decode[NUM_INSTRUC];
@@ -427,7 +435,6 @@ void verifica_instrucao(AT_Code **att_code, FILE *fp,  cp_info *constPool){
 		opcode = (*att_code)->code[i];
 		i++;	//posição seguinte para leitura do byte de preenchimeto que esta entre 0 e 3 bytes
 
-		
 		switch(opcode){
 			case TABLESWITCH:
 				if_tableswitch(&i, fp, att_code);
@@ -445,22 +452,23 @@ void verifica_instrucao(AT_Code **att_code, FILE *fp,  cp_info *constPool){
 	}
 }
 
-AT_Code ler_Att_code(AT_Code **code_att, FILE *fp, uint16_t name_ind, uint32_t att_len, cp_info *constPool){
+AT_Code ler_Att_code(AT_Code **code_att, FILE *fp, uint16_t name_ind){
 	AT_Code *out = (*code_att);
 
-	int pos_init = ftell(fp);	//pega a posição atual do ponteiro no arquivo fp
 
 	//pega o indice do nome do atributo e comprimento
 	out->attribute_name_index = name_ind;
-	out->attribute_length = att_len;
+	// out->attribute_length = att_len;
+	out->attribute_length = ler_u4(fp);
 
+	int pos_init = ftell(fp);	//pega a posição atual do ponteiro no arquivo fp
 
 
 	out->max_stack = ler_u2(fp);	//Informação da profundidade maxima da pilha de operando durante a execução do mento
 	out->max_locals = ler_u2(fp);	//número de variaveis locais (inclui os paramemtros) do vetor de var. locais
 	out->code_length = ler_u4(fp);	//numero de bytes no seu array code[] (deve ser maior que zero)
-	//printf("out->code_length = %d\n", out->code_length);
-	verifica_instrucao(&(out), fp, constPool);
+	
+	verifica_instrucao(&(out), fp);
 	
 	
 	out->exception_table_length = ler_u2(fp);
@@ -468,12 +476,11 @@ AT_Code ler_Att_code(AT_Code **code_att, FILE *fp, uint16_t name_ind, uint32_t a
 	out->EXC_table = (exception_table *) malloc(sizeof(exception_table) * out->exception_table_length);
 
 	//para cada entrada entrada na tabela de exception, lê os dados referentes
-	//printf("out->exception_table_length - %x\n", (int32_t)(out->exception_table_length));
 	for(int i = 0; i < out->exception_table_length; i++){
 		out->EXC_table[i].start_pc = ler_u2(fp);		//
-		out->EXC_table[i].end_pc = ler_u2(fp);		//
+		out->EXC_table[i].end_pc = ler_u2(fp);			//
 		out->EXC_table[i].handler_pc = ler_u2(fp);
-		out->EXC_table[i].catch_type = ler_u2(fp);	//
+		out->EXC_table[i].catch_type = ler_u2(fp);		//
 	}
 
 	out->attributes_count = ler_u2(fp);
@@ -485,18 +492,18 @@ AT_Code ler_Att_code(AT_Code **code_att, FILE *fp, uint16_t name_ind, uint32_t a
 
 	// printf("out->attribute_length - %d\n", out->attribute_length);
 	while(ftell(fp) - pos_init < (int32_t)(out->attribute_length)){
-		ler_u1(fp);
+		/*out->attributes[i]*/ ler_u1(fp);
 	}
 
 	return *out;
 }
 
-AT_Exceptions ler_att_excp(AT_Exceptions **att_excp, FILE *fp, uint16_t name_ind, uint32_t att_len, cp_info *constPool){
+AT_Exceptions ler_att_excp(AT_Exceptions **att_excp, FILE *fp, uint16_t name_ind){
 	AT_Exceptions *out = (*att_excp);
 
 	//pega name index e index length
 	out->attribute_name_index = name_ind;
-	out->attribute_length = att_len;
+	out->attribute_length = ler_u4(fp);
 
 	//numero de exceptions
 	out->number_of_exceptions = ler_u2(fp);
@@ -508,9 +515,21 @@ AT_Exceptions ler_att_excp(AT_Exceptions **att_excp, FILE *fp, uint16_t name_ind
 	for(int x = 0; x < out->number_of_exceptions; x++){
 		printf("%x\n", ler_u2(fp));
 	}
+
+	return *out;
 }
+
+/*AT_ConstantValue ler_att_ctv(FILE *cp, cp_info constPool, cFile cf){
+	AT_ConstantValue out;
+
+	out.attribute_name_index = ler_u2(fp);		//pega o index de referencia para tabela de constPool que referencia o nome do atributo
+	out.attribute_length = ler_u4(fp);			//pega o tamanho em byte do restante do atributo (não inclui os 6 bytes que contem o indice do nome e o comprimento do atributo)
+
+	out.
+}
+*/
 /*Lê os fields*/
-field_info ler_fields (FILE *fp, cp_info *constPool, cFile cf){
+field_info ler_fields (FILE *fp, cp_info *constPool){
 	field_info out;
 
 	out.access_flags = ler_u2(fp) & 0x0df;
@@ -519,9 +538,12 @@ field_info ler_fields (FILE *fp, cp_info *constPool, cFile cf){
 	out.attribute_count = ler_u2(fp);
 
 	//verificar o tipo de attribute, se for (constantValue)
-	out.attributes = (attribute_info *) malloc(sizeof(attribute_info) * out.attribute_count);
-	for(int i = 0; i < out.attribute_count; i++)
-		out.attributes[i] = ler_attribute(fp, constPool, cf);
+	if(out.attribute_count != 0){
+		out.att_ctv = (AT_ConstantValue *) malloc(sizeof(AT_ConstantValue) * out.attribute_count);
+		for(int i = 0; i < out.attribute_count; i++){
+			//out.att_ctv[i] = ler_attribute(fp, constPool, cf);
+		}
+	}
 
 	return out;
 }
@@ -546,47 +568,44 @@ attribute_info ler_attribute(FILE *fp, cp_info *constPool, cFile cf){
 
 
 /* Funcoes de methods */
-method_info ler_methods(FILE *fp, cp_info *constPool, cFile cf){
-	method_info *out = cf.methods;
+method_info ler_methods(FILE *fp, cp_info *constPool){
+	method_info ret;
 	
-	AT_Code ret;
-	uint32_t att_len;					//attribute_length auxiliar para atributo
 	uint16_t name_ind;					//name_index auxiliar para atributo
-	static int t = 0;
-	out->access_flags = ler_u2(fp);		//pega o flag
-	out->name_index = ler_u2(fp);		//pega index de referencia para tabeal constPool que referencia o nome do metodo
-	out->descriptor_index = ler_u2(fp);	//pega index de referencia para tabeal constPool que referencia um descritor do metodo
-	out->attributes_count = ler_u2(fp);	//pega o número de atributos do metodo
+
+	ret.access_flags = ler_u2(fp);			//pega o flag
+	ret.name_index = ler_u2(fp);			//pega index de referencia para tabeal constPool que referencia o nome do metodo
+	ret.descriptor_index = ler_u2(fp);		//pega index de referencia para tabeal constPool que referencia um descritor do metodo
+	ret.attributes_count = ler_u2(fp);		//pega o número de atributos do metodo
 	
-	/*printf("access_flags = %x\n", out->access_flags);
+	/*printf("access_flags = ");
+	dereference_index_UTF8(ret.access_flags, constPool);
 	printf("name_index = ");
-	dereference_index_UTF8(out->name_index, constPool);
+	dereference_index_UTF8(ret.name_index, constPool);
 	printf("\n");
 	printf("descriptor_index = ");
-	dereference_index_UTF8(out->descriptor_index, constPool);
+	dereference_index_UTF8(ret.descriptor_index, constPool);
 	printf("\n");
-	printf("attributes_count = %d\n", out->attributes_count);*/
+	printf("attributes_count = %d\n", ret.attributes_count);*/
 
-	for (int i = 0; i < out->attributes_count; i++){
+	for (int i = 0; i < ret.attributes_count; i++){
 
-		
 		name_ind = ler_u2(fp);
-		att_len = ler_u4(fp);
 
+		// printf("%s\n", (char *) constPool[name_ind].info[1].array);
 		// checa se é atributo Code:
 		if(strcmp((char *) constPool[name_ind].info[1].array, "Code") == 0){
-			out->att_code = (AT_Code *) malloc(sizeof(AT_Code));	//aloca memoria para o atributo Code
-			ler_Att_code(&(out->att_code), fp, name_ind, att_len, constPool);		//le o Code
+			ret.att_code = (AT_Code *) malloc(sizeof(AT_Code));	//aloca memoria para o atributo Code
+			ler_Att_code(&(ret.att_code), fp, name_ind);		//le o Code
 
 		}else if(strcmp((char *) constPool[name_ind].info[1].array, "Exception") == 0){
 			//aloca espaço adequado
 			//chama função para tratar exceptions
-			out->att_excp = (AT_Exceptions *) malloc(sizeof(AT_Exceptions));
+			ret.att_excp = (AT_Exceptions *) malloc(sizeof(AT_Exceptions));
+			ler_att_excp(&(ret.att_excp), fp, name_ind);
 		}
 	}
-	//show_methods(cf.constant_pool, cf.methods[t]);
-	t++;
-	return *out;
+	return ret;
 }
 
 
@@ -666,53 +685,40 @@ int init_leitor(FILE *fp){
 	classFile.this_class = ler_u2(fp);
 	classFile.super_class = ler_u2(fp);
 	classFile.interfaces_count = ler_u2(fp);
+	
 	classFile.interfaces = (uint16_t*) (malloc (sizeof(uint16_t)*classFile.interfaces_count));
 	/*Carregando e mostrando todas as interfaces que estão presentes*/
 	loadInterfaces(classFile.interfaces, classFile.interfaces_count, classFile.constant_pool, fp);
 
-	
 	classFile.fields_count = ler_u2(fp);
 	if(classFile.fields_count != 0){
 		classFile.fields = (field_info *) malloc(sizeof(field_info) * classFile.fields_count);
 		/*Carrega e mostra os fields existentes */
 
-		for (int i = 0; i < classFile.fields_count; ++i){
-			classFile.fields[i] = ler_fields(fp, classFile.constant_pool, classFile);
-			/*show_fields(classFile.constant_pool, classFile.fields[i]);*/
-
-		}
+		for (int i = 0; i < classFile.fields_count; ++i)
+			classFile.fields[i] = ler_fields(fp, classFile.constant_pool);
 	}
+
 
 	classFile.methods_count = ler_u2(fp);
 	if(classFile.methods_count != 0){
 		classFile.methods = (method_info*) malloc (sizeof(method_info)*classFile.methods_count);
 
-		for (int i = 0; i < classFile.methods_count; i++){
-			//printf("I na leitura de methods = %d, methods_count = %d\n", i, classFile.methods_count);
-			//printf ("\n	Method [%d]:\n", i);
-			classFile.methods[i] = ler_methods(fp, classFile.constant_pool, classFile);
-			//show_methods(classFile.constant_pool, classFile.methods[i]);
-		}
+		for (int j = 0; j < classFile.methods_count; j++)
+			classFile.methods[j] = ler_methods(fp, classFile.constant_pool);
 	}
 
-
 	classFile.attributes_count = ler_u2(fp);
-	//printf("attribute_count = %d\n", classFile.attributes_count);
 	if(classFile.attributes_count != 0){
 		classFile.attributes = (attribute_info *) malloc (sizeof(attribute_info) * classFile.attributes_count);
 		for (int i = 0; i < classFile.attributes_count; i++){
 			classFile.attributes[i] = ler_attribute(fp, classFile.constant_pool, classFile);
-			/*printf("%x\n", attributes[i]);*/
 		}
 	}
 
 
 	
 	/*Mostra as informações basicas como magic number, minversion...etc*/
-	for(int i = 0; i < classFile.methods_count; i++){
-		printf ("\n	Method [%d]:\n", i);
-		show_methods(classFile.constant_pool, classFile.methods[i]);
-	}
 
 	infoBasic(classFile);
 	/*chama a função para mostrar as flags ativas*/
@@ -720,8 +726,17 @@ int init_leitor(FILE *fp){
 	/*Exibe informações de Pool de constante*/
 	showConstPool(classFile.constant_pool_count, classFile.constant_pool); 
 	
+	for(int i = 0; i < classFile.methods_count; i++){
+		printf ("\n	Method [%d]:\n", i);
+		show_methods(classFile.constant_pool, classFile.methods[i]);
+	}
+
+	for(int i = 0; i < classFile.fields_count; i++){
+		printf("\n\tFields[%d]:\n", i);
+		show_fields(classFile.constant_pool, classFile.fields[i]);
+	}
+
 	
-	//fclose(fp);
 	return 0;
 }
 
@@ -730,7 +745,7 @@ int findMain (cFile classFile){
 	int i;
 
 	while (i<classFile.methods_count){
-		if (strcmp(classFile.constant_pool[(classFile.methods[i].name_index)].info[1].array, "main")==0){
+		if (strcmp((char *)classFile.constant_pool[(classFile.methods[i].name_index)].info[1].array, "main")==0){
 			return i;
 		}
 		i++;

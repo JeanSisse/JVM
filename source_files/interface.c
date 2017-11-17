@@ -1,10 +1,6 @@
 #define INTERFACE_SERVER
+#include "../headers/interface.h"
 
-#include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <ctype.h>
-#include "../headers/leitor.h"
 int menu_interface(){
 	
 	bool erro = true;

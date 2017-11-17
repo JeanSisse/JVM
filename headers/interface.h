@@ -1,3 +1,11 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <ctype.h>
+
+#include "../headers/exibidor.h"
+
+
 #ifndef INTERFACE
 	#define INTERFACE
 

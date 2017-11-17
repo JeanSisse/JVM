@@ -65,6 +65,14 @@
 		uint16_t *exception_index_table;
 	}AT_Exceptions;
 
+	//Pode não ser preciso, pois a informaçã ja esta sendo armazenada
+	//no attributes_info
+	typedef struct{
+		uint16_t attribute_name_index;
+		uint32_t attribute_length;
+		uint16_t constantvalue_index;
+	}AT_ConstantValue;
+
 	typedef struct {
 		uint16_t access_flags;
 		uint16_t name_index;
@@ -81,13 +89,8 @@
 		uint16_t descriptor_index;
 		uint16_t attribute_count;
 		attribute_info *attributes;
+		AT_ConstantValue *att_ctv;
 	} field_info;
-
-	typedef struct{
-		uint16_t attribute_name_index;
-		uint32_t attribute_length;
-		uint16_t constantvalue_index;
-	}AT_ConstantValue;
 	
 
 	typedef struct{}AT_InnerClasses;
@@ -167,15 +170,15 @@
 	EXT_LEITOR uint32_t ler_u4(FILE *fp);
 	EXT_LEITOR uint16_t ler_u2 (FILE *fp);
 	EXT_LEITOR attribute_info ler_attribute(FILE *fp, cp_info *constPool, cFile cf);
-	EXT_LEITOR method_info ler_methods(FILE *fp, cp_info *constPool, cFile cf);
-	EXT_LEITOR field_info ler_fields (FILE *fp, cp_info *constPool, cFile cf);
-	EXT_LEITOR AT_Code ler_Att_code(AT_Code **code_att, FILE *fp, uint16_t name_ind, uint32_t att_len, cp_info *constPool);
+	EXT_LEITOR method_info ler_methods(FILE *fp, cp_info *constPool);
+	EXT_LEITOR field_info ler_fields (FILE *fp, cp_info *constPool);
+	EXT_LEITOR AT_Code ler_Att_code(AT_Code **code_att, FILE *fp, uint16_t name_ind);
 	EXT_LEITOR int findMain (cFile classFile);
-	EXT_LEITOR void verifica_instrucao(AT_Code **att_code, FILE *fp, cp_info *constPool);
+	EXT_LEITOR void verifica_instrucao(AT_Code **att_code, FILE *fp);
 	EXT_LEITOR void if_tableswitch(uint32_t *i, FILE *fp, AT_Code **att_code);
 	EXT_LEITOR void if_lookupswitch(uint32_t *i, FILE *fp, AT_Code **att_code);
 	EXT_LEITOR void if_wide(uint32_t *i, FILE *fp, AT_Code **att_code, int *opcode);
 	EXT_LEITOR void pega_operandos(AllIns/*decoder*/ decode[], FILE *fp, int opcode, AT_Code **att_code, uint32_t *i);
 	EXT_LEITOR void init_decoder(decoder decode[]);
-	EXT_LEITOR AT_Exceptions ler_att_excp(AT_Exceptions **att_excp, FILE *fp, uint16_t name_ind, uint32_t att_len, cp_info *constPool);
+	EXT_LEITOR AT_Exceptions ler_att_excp(AT_Exceptions **att_excp, FILE *fp, uint16_t name_ind);
 #endif
